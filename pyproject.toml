@@ -1,6 +1,6 @@
 [project]
 name = "fhir-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "The trustworthy FHIR bridge for AI agents — MCP server with reproducible clinical evals, reversible de-identification, and CDS Hooks."
 readme = "README.md"
 license = { text = "Apache-2.0" }

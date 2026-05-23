@@ -12,51 +12,38 @@ from pathlib import Path
 
 import pytest
 
-from fhir_mcp.deid.pipeline import deidentify_resource, scan_for_phi_leaks
-
-
-def _collect_phi_from_bundle(bundle: dict) -> list[str]:
-    tokens: set[str] = set()
-    for entry in bundle.get("entry", []):
-        r = entry.get("resource", {})
-        if r.get("resourceType") not in {"Patient", "Practitioner", "RelatedPerson"}:
-            continue
-        for n in r.get("name", []) or []:
-            if n.get("family"):
-                tokens.add(n["family"])
-            for g in n.get("given", []) or []:
-                tokens.add(g)
-            if n.get("text"):
-                tokens.add(n["text"])
-        for ident in r.get("identifier", []) or []:
-            if ident.get("value"):
-                tokens.add(ident["value"])
-        for tel in r.get("telecom", []) or []:
-            if tel.get("value"):
-                tokens.add(tel["value"])
-        for addr in r.get("address", []) or []:
-            for line in addr.get("line", []) or []:
-                tokens.add(line)
-            if addr.get("city"):
-                tokens.add(addr["city"])
-            if addr.get("postalCode"):
-                tokens.add(addr["postalCode"])
-        if r.get("birthDate"):
-            tokens.add(r["birthDate"])
-    return sorted(tokens)
+from fhir_mcp.deid.pipeline import (
+    collect_known_phi_from_bundle,
+    deidentify_resource,
+    scan_for_phi_leaks,
+)
 
 
 @pytest.mark.eval
 async def test_no_phi_leak_in_any_golden_bundle(golden_dir: Path) -> None:
+    """Walks every resource in every bundle; scans every de-id output for every
+    known PHI token across all resource types (not just Patient/Practitioner).
+    This is the headline 'zero leaks' contract."""
     bundle_files = sorted(golden_dir.glob("*.json"))
     assert bundle_files, "no golden bundles present"
+    grand_total_resources = 0
+    grand_total_tokens = 0
     for path in bundle_files:
         bundle = json.loads(path.read_text())
-        known_phi = _collect_phi_from_bundle(bundle)
+        known_phi = collect_known_phi_from_bundle(bundle)
+        grand_total_tokens += len(known_phi)
         for entry in bundle.get("entry", []):
             r = entry.get("resource", {})
+            grand_total_resources += 1
             deid = await deidentify_resource(r)
             leaks = scan_for_phi_leaks(deid, known_phi)
             assert leaks == [], (
                 f"{path.name} :: {r.get('resourceType')}/{r.get('id')} leaked: {leaks}"
             )
+    # Sanity floor — if these numbers shrink, the golden corpus regressed.
+    assert grand_total_resources >= 40, (
+        f"only {grand_total_resources} resources scanned; expected ≥40"
+    )
+    assert grand_total_tokens >= 30, (
+        f"only {grand_total_tokens} PHI tokens extracted; the leak gate is too narrow"
+    )

@@ -83,10 +83,12 @@ async def get_medications(payload: GetMedicationsInput) -> GetMedicationsOutput:
     interactions: list[InteractionCard] = []
     if payload.include_interactions and meds_raw:
         allergies_raw = await backend.search("AllergyIntolerance", {"patient": real_id, "_count": 50})
+        # The CDS client de-identifies prefetch resources internally before any
+        # wire egress, so passing raw is safe — it never leaves the process.
         prefetch = {"medications": meds_raw, "allergies": allergies_raw}
         client = get_cds_client()
         resp = await client.invoke("medication-prescribe", context={}, prefetch=prefetch)
-        for card in resp.get("cards") or []:
+        for card in resp.cards:
             interactions.append(
                 InteractionCard(
                     severity=str(card.get("indicator", "info")),

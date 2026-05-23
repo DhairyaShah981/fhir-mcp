@@ -5,6 +5,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-05-23
+
+Trust-hardening patch driven by a multi-agent review of the v0.2.0 surface.
+
+### Security
+- **CDS Hooks live calls no longer leak source PHI.** `cds_hooks/client.py` now de-identifies every resource in `prefetch` before posting to the third-party endpoint. Adds `tests/test_cds_hooks_client.py::test_live_prefetch_is_deidentified_before_posting` as the regression gate. Previously `allow_live=True` would have sent raw `Patient.name`, MRN, etc. to `cds.logicahealth.org`.
+- **`@audited(phi_args=...)` strips declared PHI fields** even when `FHIR_MCP_VERBOSE_AUDIT=true`. `create_clinical_note.free_text` is now annotated. Removes a documented operator footgun. New tests in `tests/test_audit_phi_safety.py`.
+- **Pseudonym width bumped from 32 → 64 bits** with detect-and-extend on collision; vault gained `asyncio.Lock` + `init_lock` to eliminate cache-state races on first-write.
+
+### Fixed
+- HAPI search: `date_ge` + `date_le` now go on the wire as two `date=` params instead of being string-concatenated (was broken for closed-range queries).
+- HAPI `$everything`: now sends `_count` and caps results at 200 to protect LLM context windows; emits a `hapi_everything_truncated` warning when the cap is hit.
+- `CdsHooksClient.invoke` returns a `CdsHooksResponse` dataclass — callers now know definitively whether the mock fired (incl. on live-failure fallback) via `used_mock` + `fallback_reason`.
+- PHI leak scanner (`scan_for_phi_leaks` + `collect_known_phi_from_bundle`) now walks every resource type, including notes / DocumentReference content / Observation valueString — not just Patient/Practitioner/RelatedPerson. The leak gate is now much wider.
+- README + CHANGELOG + threat model reconciled — removed claims about Presidio and AES-GCM being shipped (they're optional / roadmap), removed `fhirclient` from the architecture diagram (we don't use it), softened the competitor table with linked citations, added [langcare-mcp-fhir](https://github.com/langcare/langcare-mcp-fhir) as the newest active competitor.
+
+### Engineering
+- 206 tests passing (+8 net), **96% line coverage**, ruff + pyright clean.
+
 ## [0.2.0] — 2026-05-23
 
 ### Added — M3 (production hardening)

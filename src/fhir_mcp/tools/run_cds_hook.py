@@ -40,6 +40,10 @@ class RunCdsHookOutput(BaseModel):
     available_hooks: list[str]
     cards: list[CdsCard] = Field(default_factory=list)
     used_mock: bool
+    fallback_reason: str | None = Field(
+        default=None,
+        description="Populated when allow_live=true but the live endpoint failed and we fell back to the mock.",
+    )
 
 
 @traced("run_cds_hook")
@@ -61,7 +65,7 @@ async def run_cds_hook(payload: RunCdsHookInput) -> RunCdsHookOutput:
         payload.hook, context=payload.context, prefetch=prefetch, allow_live=payload.allow_live
     )
     cards: list[CdsCard] = []
-    for card in resp.get("cards") or []:
+    for card in resp.cards:
         cards.append(
             CdsCard(
                 severity=str(card.get("indicator", "info")),
@@ -75,5 +79,6 @@ async def run_cds_hook(payload: RunCdsHookInput) -> RunCdsHookOutput:
         hook=payload.hook,
         available_hooks=sorted(MOCK_HOOKS.keys()),
         cards=cards,
-        used_mock=not payload.allow_live,
+        used_mock=resp.used_mock,
+        fallback_reason=resp.fallback_reason,
     )

@@ -183,9 +183,105 @@ async def _rewrite_references(node: Any) -> None:
 
 
 def scan_for_phi_leaks(payload: Any, known_phi_tokens: list[str]) -> list[str]:
-    """Return any known PHI tokens that still appear in the payload."""
+    """Return any known PHI tokens that still appear in the payload.
+
+    Two-pass: exact lowercase substring (catches most), and a defensive
+    whitespace-normalized pass (catches `Jane  Doe` vs `Jane Doe`).
+    """
     blob = _stringify(payload).lower()
-    return [t for t in known_phi_tokens if t.lower() in blob]
+    blob_norm = " ".join(blob.split())
+    leaked: list[str] = []
+    for token in known_phi_tokens:
+        if not token:
+            continue
+        t = token.lower()
+        if t in blob or t in blob_norm:
+            leaked.append(token)
+    return leaked
+
+
+def collect_known_phi_from_bundle(bundle: dict[str, Any]) -> list[str]:
+    """Extract every PHI-shaped token from a Synthea-style bundle for leak scans.
+
+    Walks the same paths ``deidentify_resource`` operates on, **across every
+    resource type** (including free-text ``note`` / ``comment`` / DocumentReference
+    content), so a leak from any non-Patient resource is still caught.
+
+    Critically, we do **not** sweep ``code.*`` (terminology displays like
+    "Congestive heart failure" are clinical concepts, not PHI).
+    """
+    tokens: set[str] = set()
+    entries = bundle.get("entry", []) or []
+    for entry in entries:
+        if isinstance(entry, dict):
+            _collect_phi(entry.get("resource"), tokens)
+        else:
+            _collect_phi(entry, tokens)
+    # Skip empty + ultra-short tokens — too noisy to scan reliably.
+    return sorted(t for t in tokens if t and len(t) > 2)
+
+
+# Per-resource path → kind. Mirrors _PHI_PATHS in this module but only what we
+# care about for leak detection (every value at these paths *was* PHI before
+# de-id and must not reappear in the output).
+_PHI_PATHS_PER_RESOURCE: dict[str, list[str]] = {
+    "Patient": [
+        "name[].text", "name[].given[]", "name[].family",
+        "name[].prefix[]", "name[].suffix[]",
+        "identifier[].value", "telecom[].value",
+        "address[].text", "address[].line[]", "address[].city",
+        "address[].postalCode", "birthDate",
+    ],
+    "Practitioner": [
+        "name[].text", "name[].given[]", "name[].family",
+        "identifier[].value", "telecom[].value",
+    ],
+    "RelatedPerson": [
+        "name[].text", "name[].given[]", "name[].family", "telecom[].value",
+    ],
+}
+
+# Free-text paths that exist on many resource types — sweep regardless of rt.
+_FREETEXT_LEAK_PATHS = [
+    "note[].text", "comment", "valueString",
+    "content[].attachment.title",
+]
+
+
+def _collect_phi(node: Any, out: set[str]) -> None:
+    if not isinstance(node, dict):
+        return
+    rt = node.get("resourceType")
+    if isinstance(rt, str):
+        for spec in _PHI_PATHS_PER_RESOURCE.get(rt, []):
+            _walk_collect(node, spec.split("."), out)
+    for spec in _FREETEXT_LEAK_PATHS:
+        _walk_collect(node, spec.split("."), out)
+
+
+def _walk_collect(node: Any, parts: list[str], out: set[str]) -> None:
+    if not parts or node is None:
+        return
+    head, *rest = parts
+    if head.endswith("[]"):
+        head = head[:-2]
+        children = node.get(head) if isinstance(node, dict) else None
+        if not isinstance(children, list):
+            return
+        for child in children:
+            if rest:
+                _walk_collect(child, rest, out)
+            elif isinstance(child, str):
+                out.add(child)
+        return
+    if not isinstance(node, dict):
+        return
+    if rest:
+        _walk_collect(node.get(head), rest, out)
+        return
+    value = node.get(head)
+    if isinstance(value, str):
+        out.add(value)
 
 
 def _stringify(payload: Any) -> str:

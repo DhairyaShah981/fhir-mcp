@@ -82,7 +82,7 @@ _TEMPLATES: dict[NoteTemplate, Callable[[str], str]] = {
 
 
 @traced("create_clinical_note")
-@audited("create_clinical_note")
+@audited("create_clinical_note", phi_args=("free_text",))
 async def create_clinical_note(payload: CreateClinicalNoteInput) -> CreateClinicalNoteOutput:
     structured = _TEMPLATES[payload.template](payload.free_text)
     now = datetime.now(UTC).isoformat()

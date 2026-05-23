@@ -11,12 +11,21 @@ import structlog
 
 log = structlog.get_logger(__name__)
 
+# Hard upper bound on $everything pagination to keep tool outputs LLM-friendly.
+_EVERYTHING_DEFAULT_CAP = 200
+
 
 class HapiBackend:
     name: str = "hapi"
 
-    def __init__(self, base_url: str, timeout: float = 15.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout: float = 15.0,
+        everything_cap: int = _EVERYTHING_DEFAULT_CAP,
+    ) -> None:
         self._base = base_url.rstrip("/")
+        self._everything_cap = everything_cap
         self._client = httpx.AsyncClient(
             base_url=self._base,
             timeout=timeout,
@@ -27,17 +36,24 @@ class HapiBackend:
         await self._client.aclose()
 
     async def search(self, resource_type: str, params: dict[str, str | int]) -> list[dict]:
-        # Map our convenience params back to FHIR search semantics.
-        outgoing: dict[str, str] = {}
+        """Map our convenience params back to FHIR search semantics.
+
+        FHIR allows multiple ``date=`` query params with different comparators
+        (e.g. ``?date=ge2024-01-01&date=le2024-12-31`` for a closed range).
+        We emit them as a real list so httpx URL-encodes both correctly.
+        """
+        outgoing: list[tuple[str, str]] = []
         for key, value in params.items():
             if key == "date_ge":
-                outgoing.setdefault("date", f"ge{value}")
+                outgoing.append(("date", f"ge{value}"))
             elif key == "date_le":
-                outgoing["date"] = (outgoing.get("date", "") + f"&date=le{value}").lstrip("&")
+                outgoing.append(("date", f"le{value}"))
             else:
-                outgoing[key] = str(value)
+                outgoing.append((key, str(value)))
 
-        resp = await self._client.get(f"/{resource_type}", params=outgoing)
+        # httpx accepts a sequence of (str, str) pairs at runtime — the type
+        # hint expects PrimitiveData which is the same thing in practice.
+        resp = await self._client.get(f"/{resource_type}", params=outgoing)  # type: ignore[arg-type]
         resp.raise_for_status()
         bundle = resp.json()
         return [e.get("resource", {}) for e in bundle.get("entry", []) if e.get("resource")]
@@ -50,7 +66,21 @@ class HapiBackend:
         return resp.json()
 
     async def everything(self, patient_id: str) -> list[dict]:
-        resp = await self._client.get(f"/Patient/{patient_id}/$everything")
+        """Patient/$everything with a hard cap to protect LLM context windows."""
+        resp = await self._client.get(
+            f"/Patient/{patient_id}/$everything",
+            params={"_count": self._everything_cap},
+        )
         resp.raise_for_status()
         bundle = resp.json()
-        return [e.get("resource", {}) for e in bundle.get("entry", []) if e.get("resource")]
+        resources = [
+            e.get("resource", {}) for e in bundle.get("entry", []) if e.get("resource")
+        ]
+        if len(resources) >= self._everything_cap:
+            log.warning(
+                "hapi_everything_truncated",
+                patient_id=patient_id,
+                cap=self._everything_cap,
+                returned=len(resources),
+            )
+        return resources[: self._everything_cap]

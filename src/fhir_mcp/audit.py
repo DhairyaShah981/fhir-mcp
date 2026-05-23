@@ -96,22 +96,62 @@ async def record(
         log.error("audit_write_failed", tool=tool, error=str(exc))
 
 
-def audited(tool_name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Decorator: wrap a tool handler so every invocation lands in the audit log."""
+_PHI_REDACTED = "<phi-redacted>"
+
+
+def _strip_phi_args(payload: dict[str, Any], phi_args: tuple[str, ...]) -> dict[str, Any]:
+    """Return a copy of ``payload`` with declared PHI fields hard-redacted.
+
+    Applied *before* verbose-audit serialization so the operator footgun
+    (FHIR_MCP_VERBOSE_AUDIT=true) cannot write raw PHI to the audit DB.
+    """
+    if not phi_args:
+        return payload
+    safe = dict(payload)
+    safe_kwargs = dict(safe.get("kwargs", {}))
+    for key in phi_args:
+        if key in safe_kwargs:
+            safe_kwargs[key] = _PHI_REDACTED
+    safe["kwargs"] = safe_kwargs
+    # Positional args of Pydantic-model tools are model instances; serialize
+    # via .model_dump if present, then strip declared phi keys from the dump.
+    new_args = []
+    for arg in safe.get("args", []) or []:
+        dump = arg.model_dump() if hasattr(arg, "model_dump") else arg
+        if isinstance(dump, dict):
+            for key in phi_args:
+                if key in dump:
+                    dump[key] = _PHI_REDACTED
+        new_args.append(dump)
+    safe["args"] = new_args
+    return safe
+
+
+def audited(
+    tool_name: str, *, phi_args: tuple[str, ...] = ()
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Decorator: wrap a tool handler so every invocation lands in the audit log.
+
+    ``phi_args`` declares fields whose values must never enter the audit row,
+    even when ``FHIR_MCP_VERBOSE_AUDIT=true``. The argument-hash still covers
+    them, so an investigator can prove "the same input was used" without ever
+    seeing the value.
+    """
 
     def deco(fn: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(fn)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            arg_dump = {"args": list(args[1:]) if args else [], "kwargs": kwargs}
+            arg_dump = {"args": list(args), "kwargs": kwargs}
+            safe_dump = _strip_phi_args(arg_dump, phi_args)
             try:
                 result = await fn(*args, **kwargs)
             except Exception as exc:
-                await record(tool=tool_name, args=arg_dump, outcome="error", error=str(exc))
+                await record(tool=tool_name, args=safe_dump, outcome="error", error=str(exc))
                 raise
             refs: list[str] | None = None
             if isinstance(result, dict):
                 refs = result.get("resource_refs")  # tools may opt in
-            await record(tool=tool_name, args=arg_dump, resource_refs=refs)
+            await record(tool=tool_name, args=safe_dump, resource_refs=refs)
             return result
 
         return wrapper
