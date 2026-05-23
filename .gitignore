@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# uv
+.venv/
+uv.lock.bak
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# fhir-mcp runtime state
+~/.fhir-mcp/
+.fhir-mcp/
+audit.db
+audit.db-*
+phi_vault.db
+phi_vault.db-*
+traces.jsonl
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+
+# Type checkers
+.pyright/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Eval artifacts (generated, not committed)
+evals/.cache/
+eval_report.md
+eval_report.html

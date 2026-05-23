@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.11.x"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Sync dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Ruff
+        run: uv run ruff check src evals tests
+
+      - name: Pyright
+        run: uv run pyright src
+
+      - name: Unit tests
+        run: uv run pytest tests -v --cov=src/fhir_mcp --cov-report=term-missing
+
+      - name: Eval suite (smoke — judge LLM optional)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "${ANTHROPIC_API_KEY}" ]; then
+            uv run pytest evals -v -m eval
+          else
+            echo "ANTHROPIC_API_KEY not set — skipping judge-LLM evals; running structural evals only"
+            uv run pytest evals -v -m "eval and not live" -k "not judge"
+          fi
+
+      - name: Render eval scoreboard
+        if: matrix.python-version == '3.12'
+        run: uv run python evals/report.py --out eval_report.md || true
+
+      - name: Upload eval report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: eval_report.md
+          if-no-files-found: ignore

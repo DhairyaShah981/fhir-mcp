@@ -1,0 +1,207 @@
+{
+  "resourceType": "Bundle",
+  "id": "diabetic-60yo-bundle",
+  "type": "collection",
+  "meta": {
+    "tag": [
+      {"system": "https://fhir-mcp.dev/tags", "code": "golden", "display": "Golden eval fixture (frozen)"}
+    ]
+  },
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-diabetic-60yo",
+        "identifier": [
+          {"system": "http://hospital.example.org/mrn", "value": "MRN-12345678"},
+          {"system": "http://hl7.org/fhir/sid/us-ssn", "value": "555-12-3456"}
+        ],
+        "active": true,
+        "name": [
+          {"use": "official", "text": "Jonathan Edward Smith", "family": "Smith", "given": ["Jonathan", "Edward"]}
+        ],
+        "telecom": [
+          {"system": "phone", "value": "(555) 412-9988", "use": "home"},
+          {"system": "email", "value": "jsmith@example.com"}
+        ],
+        "gender": "male",
+        "birthDate": "1964-08-12",
+        "address": [
+          {"line": ["742 Evergreen Terrace"], "city": "Springfield", "state": "IL", "postalCode": "62704", "country": "US"}
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-dm2",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "verificationStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed"}]},
+        "code": {
+          "coding": [
+            {"system": "http://snomed.info/sct", "code": "44054006", "display": "Type 2 diabetes mellitus"},
+            {"system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "E11.9", "display": "Type 2 diabetes mellitus without complications"}
+          ],
+          "text": "Type 2 diabetes mellitus"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "onsetDateTime": "2015-03-14",
+        "recordedDate": "2015-03-14"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-htn",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "verificationStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "59621000", "display": "Essential hypertension"}],
+          "text": "Essential hypertension"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "onsetDateTime": "2017-09-02"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-hyperlip",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "55822004", "display": "Hyperlipidemia"}],
+          "text": "Hyperlipidemia"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "onsetDateTime": "2018-05-21"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-metformin",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "860975", "display": "Metformin hydrochloride 1000 MG Oral Tablet"}],
+          "text": "Metformin 1000mg PO BID"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2015-03-14",
+        "dosage": [{"text": "1 tablet by mouth twice daily"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-lisinopril",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "314076", "display": "Lisinopril 10 MG Oral Tablet"}],
+          "text": "Lisinopril 10mg PO daily"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2017-09-02",
+        "dosage": [{"text": "1 tablet by mouth once daily"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-atorvastatin",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "617314", "display": "Atorvastatin 40 MG Oral Tablet"}],
+          "text": "Atorvastatin 40mg PO QHS"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2018-05-21",
+        "dosage": [{"text": "1 tablet by mouth at bedtime"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-penicillin",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical", "code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "91936005", "display": "Allergy to penicillin"}],
+          "text": "Penicillin allergy — rash"
+        },
+        "patient": {"reference": "Patient/patient-diabetic-60yo"},
+        "recordedDate": "2010-01-15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-2026-04",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory"}]}],
+        "code": {
+          "coding": [{"system": "http://loinc.org", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood"}],
+          "text": "HbA1c"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2026-04-12",
+        "valueQuantity": {"value": 7.8, "unit": "%", "system": "http://unitsofmeasure.org", "code": "%"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-2025-10",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory"}]}],
+        "code": {
+          "coding": [{"system": "http://loinc.org", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood"}],
+          "text": "HbA1c"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2025-10-04",
+        "valueQuantity": {"value": 8.2, "unit": "%", "system": "http://unitsofmeasure.org", "code": "%"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-2025-04",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory"}]}],
+        "code": {
+          "coding": [{"system": "http://loinc.org", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood"}],
+          "text": "HbA1c"
+        },
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2025-04-15",
+        "valueQuantity": {"value": 8.6, "unit": "%", "system": "http://unitsofmeasure.org", "code": "%"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-bp-2026-04",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "85354-9", "display": "Blood pressure panel"}], "text": "Blood pressure"},
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2026-04-12",
+        "component": [
+          {"code": {"coding": [{"system": "http://loinc.org", "code": "8480-6", "display": "Systolic blood pressure"}]}, "valueQuantity": {"value": 138, "unit": "mmHg"}},
+          {"code": {"coding": [{"system": "http://loinc.org", "code": "8462-4", "display": "Diastolic blood pressure"}]}, "valueQuantity": {"value": 86, "unit": "mmHg"}}
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ldl-2026-04",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "13457-7", "display": "LDL Cholesterol"}], "text": "LDL"},
+        "subject": {"reference": "Patient/patient-diabetic-60yo"},
+        "effectiveDateTime": "2026-04-12",
+        "valueQuantity": {"value": 112, "unit": "mg/dL"}
+      }
+    }
+  ]
+}
