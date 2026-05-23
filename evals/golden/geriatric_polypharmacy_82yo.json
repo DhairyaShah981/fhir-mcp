@@ -1,0 +1,148 @@
+{
+  "resourceType": "Bundle",
+  "id": "geriatric-polypharmacy-82yo-bundle",
+  "type": "collection",
+  "meta": {"tag": [{"system": "https://fhir-mcp.dev/tags", "code": "golden"}]},
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-geriatric-polypharmacy-82yo",
+        "identifier": [{"system": "http://hospital.example.org/mrn", "value": "MRN-55667788"}],
+        "name": [{"use": "official", "text": "Robert James Goldberg", "family": "Goldberg", "given": ["Robert", "James"]}],
+        "telecom": [{"system": "phone", "value": "(212) 555-9981"}],
+        "gender": "male",
+        "birthDate": "1943-10-04",
+        "address": [{"line": ["220 W 82nd St Apt 12C"], "city": "New York", "state": "NY", "postalCode": "10024"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-afib-geri",
+        "clinicalStatus": {"coding": [{"code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "44054007", "display": "Atrial fibrillation"}],
+          "text": "Atrial fibrillation"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "onsetDateTime": "2015-06-11"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-chf-geri",
+        "clinicalStatus": {"coding": [{"code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "42343007", "display": "Congestive heart failure"}],
+          "text": "Congestive heart failure, EF 35%"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "onsetDateTime": "2016-02-18"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-t2dm-geri",
+        "clinicalStatus": {"coding": [{"code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "44054006", "display": "Diabetes mellitus type 2"}],
+          "text": "Type 2 diabetes mellitus"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "onsetDateTime": "2005-01-23"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-apixaban-geri",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "1043400", "display": "Apixaban 5 MG Oral Tablet"}],
+          "text": "Apixaban 5mg PO BID"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "effectiveDateTime": "2018-04-02"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-aspirin-geri",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "243670", "display": "Aspirin 81 MG Oral Tablet"}],
+          "text": "Aspirin 81mg PO daily"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "effectiveDateTime": "2010-03-14"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-metformin-geri",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "860975", "display": "Metformin hydrochloride 1000 MG Oral Tablet"}],
+          "text": "Metformin 1000mg PO BID"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "effectiveDateTime": "2005-01-23"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-furosemide-geri",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "197378", "display": "Furosemide 40 MG Oral Tablet"}],
+          "text": "Furosemide 40mg PO daily"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "effectiveDateTime": "2016-02-18"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-lisinopril-geri",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "314076", "display": "Lisinopril 10 MG Oral Tablet"}],
+          "text": "Lisinopril 10mg PO daily"
+        },
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "effectiveDateTime": "2016-02-18"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-creatinine-geri-2026",
+        "status": "final",
+        "category": [{"coding": [{"code": "laboratory"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "2160-0"}], "text": "Creatinine"},
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "effectiveDateTime": "2026-04-30",
+        "valueQuantity": {"value": 1.6, "unit": "mg/dL"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-geri-2026",
+        "status": "final",
+        "category": [{"coding": [{"code": "laboratory"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "4548-4"}], "text": "HbA1c"},
+        "subject": {"reference": "Patient/patient-geriatric-polypharmacy-82yo"},
+        "effectiveDateTime": "2026-04-30",
+        "valueQuantity": {"value": 6.9, "unit": "%"}
+      }
+    }
+  ]
+}

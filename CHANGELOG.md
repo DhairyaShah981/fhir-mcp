@@ -5,6 +5,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-23
+
+### Added — M3 (production hardening)
+- **SMART on FHIR OAuth2 v2** (`src/fhir_mcp/auth/`):
+  - `.well-known/smart-configuration` discovery
+  - **PKCE authorization-code flow** for interactive launches (sandbox / Epic on FHIR / Cerner)
+  - **Backend-services asymmetric JWT bearer flow** (RFC 7523 / SMART v2) with `RS384` default
+  - `SmartToken` shape carrying scopes, expiry, patient context
+  - SMART scope parser supporting both v1 (`patient/*.read`) and v2 (`patient/Observation.crudsa`) forms
+- **Custom scope `fhir-mcp/reid`** gating re-identification. `reidentify()` now accepts either a static key *or* a SMART token; the token's `Patient/...` context (or `client_id`) is recorded as the audit actor.
+- **Supabase / Postgres cloud mode**: setting `SUPABASE_DB_URL` routes audit + vault to Postgres via asyncpg; `FHIR_MCP_VAULT_URL` allows splitting vault and audit across stores. Schemes are auto-normalized to `postgresql+asyncpg://`.
+- **CLI surface**: `fhir-mcp smart-discover`, `smart-authorize-url`, `smart-jwt`.
+- **Cross-model judge harness** (`evals/cross_model.py`) — runs the same rubric through Claude / GPT / Gemini judges and reports score deltas. Skipped silently without API keys; emits JSON report for CI artifact.
+- **STRIDE threat model** at `docs/THREAT_MODEL.md` — per-component STRIDE table across all 12 components and 5 trust boundaries.
+- **2 more golden Synthea bundles**: `pediatric_asthma_8yo` (acute care + spacer + peanut allergy), `geriatric_polypharmacy_82yo` (8 active meds — exercises apixaban+aspirin DDI and Beers Criteria territory).
+- **PyPI release workflow** (`.github/workflows/publish.yml`) using OIDC trusted publishing — no API tokens stored.
+
+### Changed
+- Bumped to **0.2.0** (semver: minor — new public CLI subcommands, new optional `cloud` extra needs `asyncpg`, `reidentify()` signature extended).
+- `pyjwt[crypto]` is now a direct dependency (needed for SMART backend-services flow).
+
+### Engineering
+- **198 tests passing, 97% coverage** (+29 tests, +1pp coverage vs M2). Ruff + pyright clean.
+
 ### Added — M2 (v0.1 feature-complete, 2026-05-23)
 - **All 8 MCP tools shipped:** `search_observations` (with trend-window slope/mean/last stats), `search_conditions`, `get_medications` (with auto CDS-Hooks drug-drug check), `validate_code` (offline LOINC/SNOMED/RxNorm/ICD-10 + optional tx.fhir.org), `create_clinical_note` (SOAP/discharge/prior-auth), `run_cds_hook`.
 - **3 MCP Resources:** `fhir://patient/{pseudonym}/{summary,trends,medications}`.

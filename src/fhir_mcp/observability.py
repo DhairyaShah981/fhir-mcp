@@ -64,7 +64,7 @@ def span(name: str, **attributes: Any) -> Iterator[str]:
         secret_key=settings.langfuse_secret_key,
         host=settings.langfuse_host,
     )
-    trace = client.trace(id=trace_id, name=name, metadata=attributes)
+    trace = client.trace(id=trace_id, name=name, metadata=attributes)  # type: ignore[attr-defined]
     try:
         yield trace_id
     except Exception as exc:

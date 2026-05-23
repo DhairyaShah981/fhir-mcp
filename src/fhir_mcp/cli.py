@@ -105,6 +105,97 @@ def reid_cmd(
     console.print(f"{pseudonym} → [bold]{original}[/bold]")
 
 
+@app.command(name="smart-discover")
+def smart_discover_cmd(
+    issuer: str = typer.Argument(..., help="FHIR base URL of the SMART issuer."),
+) -> None:
+    """Fetch and pretty-print the issuer's .well-known/smart-configuration."""
+    from .auth.smart import discover
+
+    async def _go():
+        return await discover(issuer)
+
+    cfg = asyncio.run(_go())
+    t = Table(title=f"SMART configuration — {issuer}")
+    t.add_column("Field")
+    t.add_column("Value")
+    for k, v in {
+        "issuer": cfg.issuer,
+        "authorization_endpoint": cfg.authorization_endpoint,
+        "token_endpoint": cfg.token_endpoint,
+        "capabilities": ", ".join(cfg.capabilities),
+        "scopes_supported": ", ".join(cfg.scopes_supported),
+        "auth_methods": ", ".join(cfg.token_endpoint_auth_methods_supported),
+    }.items():
+        t.add_row(k, v)
+    console.print(t)
+
+
+@app.command(name="smart-authorize-url")
+def smart_authorize_url_cmd(
+    issuer: str | None = typer.Option(None, help="Override FHIR_MCP_SMART_ISSUER."),
+    client_id: str | None = typer.Option(None, help="Override FHIR_MCP_SMART_CLIENT_ID."),
+    redirect_uri: str | None = typer.Option(None, help="Override FHIR_MCP_SMART_REDIRECT_URI."),
+    scopes: str | None = typer.Option(None, help="Override FHIR_MCP_SMART_SCOPES."),
+) -> None:
+    """Print the SMART authorize URL the user should visit to start the OAuth dance."""
+    from .auth.smart import AuthorizationCodeFlow, discover
+
+    s = get_settings()
+    iss = issuer or s.smart_issuer
+    cid = client_id or s.smart_client_id
+    if not iss or not cid:
+        console.print(
+            "[red]Need FHIR_MCP_SMART_ISSUER and FHIR_MCP_SMART_CLIENT_ID (or --issuer/--client-id).[/red]"
+        )
+        raise typer.Exit(code=2)
+
+    async def _go() -> tuple[str, str]:
+        cfg = await discover(iss)
+        flow = AuthorizationCodeFlow(
+            config=cfg,
+            client_id=cid,
+            redirect_uri=redirect_uri or s.smart_redirect_uri,
+            scopes=scopes or s.smart_scopes,
+        )
+        return flow.authorize_url(), flow.state
+
+    url, state = asyncio.run(_go())
+    console.print(f"[bold]Visit this URL to authorize:[/bold]\n{url}\n")
+    console.print(f"[dim]Expected state on callback:[/dim] {state}")
+
+
+@app.command(name="smart-jwt")
+def smart_jwt_cmd(
+    issuer: str | None = typer.Option(None, help="Issuer to derive the token endpoint from."),
+) -> None:
+    """Mint a SMART backend-services client assertion (for manual testing)."""
+    from .auth.smart import _build_client_assertion, discover
+
+    s = get_settings()
+    iss = issuer or s.smart_issuer
+    if not iss or not s.smart_client_id or not s.smart_private_key_pem or not s.smart_key_id:
+        console.print(
+            "[red]Need FHIR_MCP_SMART_ISSUER, _CLIENT_ID, _PRIVATE_KEY_PEM, and _KEY_ID set.[/red]"
+        )
+        raise typer.Exit(code=2)
+
+    client_id = s.smart_client_id
+    private_key_pem = s.smart_private_key_pem
+    key_id = s.smart_key_id
+
+    async def _go() -> str:
+        cfg = await discover(iss)
+        return _build_client_assertion(
+            client_id=client_id,
+            token_endpoint=cfg.token_endpoint,
+            private_key_pem=private_key_pem,
+            key_id=key_id,
+        )
+
+    console.print(asyncio.run(_go()))
+
+
 @app.command(name="eval")
 def eval_cmd(
     report_path: str = typer.Option("eval_report.md", help="Where to write the scoreboard."),

@@ -1,0 +1,71 @@
+{
+  "resourceType": "Bundle",
+  "id": "pediatric-asthma-8yo-bundle",
+  "type": "collection",
+  "meta": {"tag": [{"system": "https://fhir-mcp.dev/tags", "code": "golden"}]},
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-pediatric-asthma-8yo",
+        "identifier": [{"system": "http://hospital.example.org/mrn", "value": "MRN-90021133"}],
+        "name": [{"use": "official", "text": "Liam Connor MacDonald", "family": "MacDonald", "given": ["Liam", "Connor"]}],
+        "telecom": [
+          {"system": "phone", "value": "(503) 555-7711", "use": "home"},
+          {"system": "email", "value": "macdonald.family@example.com"}
+        ],
+        "gender": "male",
+        "birthDate": "2017-03-22",
+        "address": [{"line": ["3411 SE Hawthorne Blvd"], "city": "Portland", "state": "OR", "postalCode": "97214"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-asthma",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "90460009", "display": "Asthma"}],
+          "text": "Mild persistent asthma"
+        },
+        "subject": {"reference": "Patient/patient-pediatric-asthma-8yo"},
+        "onsetDateTime": "2021-09-14"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-albuterol",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "197378", "display": "Albuterol HFA 90 mcg/actuation rescue inhaler"}],
+          "text": "Albuterol 90 mcg/actuation, 2 puffs PRN q4h with spacer"
+        },
+        "subject": {"reference": "Patient/patient-pediatric-asthma-8yo"},
+        "effectiveDateTime": "2021-09-14"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-peanut",
+        "clinicalStatus": {"coding": [{"code": "active"}]},
+        "code": {"text": "Peanut allergy — anaphylaxis"},
+        "patient": {"reference": "Patient/patient-pediatric-asthma-8yo"},
+        "recordedDate": "2020-04-02"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-peak-flow-2026",
+        "status": "final",
+        "category": [{"coding": [{"code": "vital-signs"}]}],
+        "code": {"text": "Peak expiratory flow"},
+        "subject": {"reference": "Patient/patient-pediatric-asthma-8yo"},
+        "effectiveDateTime": "2026-04-08",
+        "valueQuantity": {"value": 250, "unit": "L/min"}
+      }
+    }
+  ]
+}
