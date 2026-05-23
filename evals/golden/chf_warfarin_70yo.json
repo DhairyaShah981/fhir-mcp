@@ -1,0 +1,133 @@
+{
+  "resourceType": "Bundle",
+  "id": "chf-warfarin-70yo-bundle",
+  "type": "collection",
+  "meta": {
+    "tag": [{"system": "https://fhir-mcp.dev/tags", "code": "golden"}]
+  },
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-chf-warfarin-70yo",
+        "identifier": [{"system": "http://hospital.example.org/mrn", "value": "MRN-77001122"}],
+        "active": true,
+        "name": [{"use": "official", "text": "Margaret Anne O'Reilly", "family": "O'Reilly", "given": ["Margaret", "Anne"]}],
+        "telecom": [{"system": "phone", "value": "(617) 555-2244"}],
+        "gender": "female",
+        "birthDate": "1955-11-03",
+        "address": [{"line": ["18 Beacon Hill Rd"], "city": "Boston", "state": "MA", "postalCode": "02114"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-chf",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "code": {
+          "coding": [
+            {"system": "http://snomed.info/sct", "code": "42343007", "display": "Congestive heart failure"},
+            {"system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "I50.9", "display": "Heart failure, unspecified"}
+          ],
+          "text": "Congestive heart failure"
+        },
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "onsetDateTime": "2019-02-10"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-afib",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "44054007", "display": "Atrial fibrillation"}],
+          "text": "Atrial fibrillation"
+        },
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "onsetDateTime": "2018-08-22"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-htn-chf",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "59621000", "display": "Essential hypertension"}],
+          "text": "Essential hypertension"
+        },
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "onsetDateTime": "2010-04-15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-warfarin",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "855332", "display": "Warfarin Sodium 5 MG Oral Tablet"}],
+          "text": "Warfarin 5mg PO daily"
+        },
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "effectiveDateTime": "2018-08-25",
+        "dosage": [{"text": "1 tablet by mouth once daily, adjust per INR"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-aspirin",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "243670", "display": "Aspirin 81 MG Oral Tablet"}],
+          "text": "Aspirin 81mg PO daily"
+        },
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "effectiveDateTime": "2019-02-10",
+        "dosage": [{"text": "1 tablet by mouth once daily"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-furosemide",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "197378", "display": "Furosemide 40 MG Oral Tablet"}],
+          "text": "Furosemide 40mg PO BID"
+        },
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "effectiveDateTime": "2019-02-10"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-creatinine-chf-2026",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "2160-0", "display": "Creatinine [Mass/volume] in Serum or Plasma"}], "text": "Creatinine"},
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "effectiveDateTime": "2026-04-22",
+        "valueQuantity": {"value": 1.4, "unit": "mg/dL"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-bp-chf-2026",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "85354-9", "display": "Blood pressure panel"}], "text": "Blood pressure"},
+        "subject": {"reference": "Patient/patient-chf-warfarin-70yo"},
+        "effectiveDateTime": "2026-04-22",
+        "component": [
+          {"code": {"coding": [{"system": "http://loinc.org", "code": "8480-6"}]}, "valueQuantity": {"value": 124, "unit": "mmHg"}},
+          {"code": {"coding": [{"system": "http://loinc.org", "code": "8462-4"}]}, "valueQuantity": {"value": 78, "unit": "mmHg"}}
+        ]
+      }
+    }
+  ]
+}

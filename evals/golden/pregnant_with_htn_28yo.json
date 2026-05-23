@@ -1,0 +1,94 @@
+{
+  "resourceType": "Bundle",
+  "id": "pregnant-htn-28yo-bundle",
+  "type": "collection",
+  "meta": {
+    "tag": [{"system": "https://fhir-mcp.dev/tags", "code": "golden"}]
+  },
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-pregnant-htn-28yo",
+        "identifier": [{"system": "http://hospital.example.org/mrn", "value": "MRN-44550099"}],
+        "name": [{"use": "official", "text": "Priya Lakshmi Iyer", "family": "Iyer", "given": ["Priya", "Lakshmi"]}],
+        "telecom": [
+          {"system": "phone", "value": "(415) 555-3399"},
+          {"system": "email", "value": "priya.iyer@example.com"}
+        ],
+        "gender": "female",
+        "birthDate": "1997-07-19",
+        "address": [{"line": ["2200 Mission St Apt 4B"], "city": "San Francisco", "state": "CA", "postalCode": "94110"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-pregnancy",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "code": {
+          "coding": [
+            {"system": "http://snomed.info/sct", "code": "77386006", "display": "Pregnancy"},
+            {"system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "Z34.90", "display": "Encounter for supervision of normal pregnancy, unspecified"}
+          ],
+          "text": "Pregnancy (22 weeks)"
+        },
+        "subject": {"reference": "Patient/patient-pregnant-htn-28yo"},
+        "onsetDateTime": "2025-12-15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-htn-preg",
+        "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+        "code": {
+          "coding": [{"system": "http://snomed.info/sct", "code": "59621000", "display": "Essential hypertension"}],
+          "text": "Essential hypertension (chronic, pre-pregnancy)"
+        },
+        "subject": {"reference": "Patient/patient-pregnant-htn-28yo"},
+        "onsetDateTime": "2023-03-04"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-hctz",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "866924", "display": "Hydrochlorothiazide 25 MG Oral Tablet"}],
+          "text": "HCTZ 25mg PO daily"
+        },
+        "subject": {"reference": "Patient/patient-pregnant-htn-28yo"},
+        "effectiveDateTime": "2023-03-04"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-bp-preg-2026",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "85354-9"}], "text": "Blood pressure"},
+        "subject": {"reference": "Patient/patient-pregnant-htn-28yo"},
+        "effectiveDateTime": "2026-05-10",
+        "component": [
+          {"code": {"coding": [{"system": "http://loinc.org", "code": "8480-6"}]}, "valueQuantity": {"value": 142, "unit": "mmHg"}},
+          {"code": {"coding": [{"system": "http://loinc.org", "code": "8462-4"}]}, "valueQuantity": {"value": 92, "unit": "mmHg"}}
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hgb-preg-2026",
+        "status": "final",
+        "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory"}]}],
+        "code": {"coding": [{"system": "http://loinc.org", "code": "718-7", "display": "Hemoglobin [Mass/volume] in Blood"}], "text": "Hemoglobin"},
+        "subject": {"reference": "Patient/patient-pregnant-htn-28yo"},
+        "effectiveDateTime": "2026-05-10",
+        "valueQuantity": {"value": 10.8, "unit": "g/dL"}
+      }
+    }
+  ]
+}
