@@ -17,10 +17,26 @@ log = structlog.get_logger(__name__)
 
 
 def _golden_dir() -> Path:
-    # evals/golden lives at the repo root. Walk up from this file's location.
+    """Locate the Synthea golden bundles.
+
+    Dev mode (running from a checkout): use ``evals/golden/`` at the repo root.
+    Installed-wheel mode (``uvx fhir-mcp serve``): use the package-bundled copy
+    at ``src/fhir_mcp/_bundled_data/golden/`` (placed there by hatch
+    ``force-include`` at build time — see ``pyproject.toml``).
+    """
     here = Path(__file__).resolve()
-    repo_root = here.parents[3]  # src/fhir_mcp/backends/synthea.py → repo root
-    return repo_root / "evals" / "golden"
+    # Repo path is parents[3] only when the source tree is laid out as
+    # ``<repo>/src/fhir_mcp/backends/synthea.py``. When installed via uvx /
+    # pip the wheel layout is ``<site-packages>/fhir_mcp/backends/synthea.py``
+    # — parents[3] then points outside site-packages and won't exist.
+    candidates = [
+        here.parents[3] / "evals" / "golden",      # dev checkout
+        here.parent.parent / "_bundled_data" / "golden",  # wheel
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]  # logged as warning when empty
 
 
 class SyntheaBackend:

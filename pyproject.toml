@@ -1,6 +1,6 @@
 [project]
 name = "fhir-mcp"
-version = "0.2.1"
+version = "0.2.2"
 description = "The trustworthy FHIR bridge for AI agents — MCP server with reproducible clinical evals, reversible de-identification, and CDS Hooks."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -68,6 +68,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fhir_mcp"]
+
+# Ship the golden Synthea bundles inside the wheel so `uvx fhir-mcp serve`
+# works out-of-the-box without a repo clone. The dev/test code reads from
+# `evals/golden/` directly; the runtime backend falls back to this path.
+[tool.hatch.build.targets.wheel.force-include]
+"evals/golden" = "fhir_mcp/_bundled_data/golden"
 
 [dependency-groups]
 dev = [

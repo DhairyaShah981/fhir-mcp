@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-05-24
+
+### Fixed
+- **`uvx fhir-mcp serve` now works out-of-the-box.** The published v0.2.1 wheel was missing the Synthea golden bundles (they live under `evals/`, outside the package tree), so a fresh PyPI install would connect cleanly but every query returned zero patients. The wheel now bundles the 5 golden Synthea fixtures under `fhir_mcp/_bundled_data/golden/` via hatch `force-include`, and the Synthea backend looks there as a fallback when the repo-relative path is absent.
+
 ## [0.2.1] — 2026-05-23
 
 Trust-hardening patch driven by a multi-agent review of the v0.2.0 surface.
