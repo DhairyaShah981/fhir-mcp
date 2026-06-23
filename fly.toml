@@ -1,0 +1,50 @@
+# Fly.io deployment config for fhir-mcp live demo.
+# Backed by 5 Synthea-generated golden bundles. No real PHI.
+#
+# Deploy:
+#   brew install flyctl
+#   fly auth login
+#   fly launch --copy-config --no-deploy   # uses this fly.toml
+#   fly volumes create fhir_mcp_state --size 1 --region bom   # 1 GB SQLite state
+#   fly deploy
+
+app = "dhairya-fhir-mcp"
+primary_region = "bom"     # Mumbai — closest free region for IN devs / MCP clients
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  FHIR_MCP_BACKEND = "synthea"
+  FHIR_MCP_STATE_DIR = "/data"
+  FHIR_MCP_HOST = "0.0.0.0"
+  FHIR_MCP_PORT = "8000"
+
+[[mounts]]
+  source = "fhir_mcp_state"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0  # demo idles when not in use (free-tier friendly)
+  processes = ["app"]
+
+# TCP healthcheck — confirms the SSE listener is up without needing a
+# FastMCP-specific /healthz route. Add an HTTP check later if you wire
+# a route into server.py.
+[[services]]
+  protocol = "tcp"
+  internal_port = 8000
+
+  [[services.tcp_checks]]
+    grace_period = "10s"
+    interval = "30s"
+    timeout = "5s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"

@@ -1,7 +1,10 @@
 # fhir-mcp
 
 > **The trustworthy FHIR bridge for AI agents.**
-> Plug Claude Code, Cursor, or any MCP-compatible assistant into a real FHIR R4 server — with reproducible clinical evals, reversible keyed de-identification, CDS Hooks decision support, and per-call audit trails out of the box.
+> Plug any MCP-compatible assistant into a real FHIR R4 server — with reproducible clinical evals, reversible keyed de-identification, CDS Hooks decision support, and per-call audit trails out of the box.
+
+**🚀 Live demo:** `https://dhairya-fhir-mcp.fly.dev/sse` _(URL fills in after `fly deploy` — see [`DEPLOY.md`](DEPLOY.md))_
+Synthea-style synthetic patients (5 golden bundles, no real PHI). Point any MCP client at the URL and call `search_patients`, `get_patient_summary`, `run_cds_hook`, or any of the other 8 tools.
 
 <p>
   <a href="https://github.com/DhairyaShah981/fhir-mcp/actions"><img src="https://img.shields.io/github/actions/workflow/status/DhairyaShah981/fhir-mcp/ci.yml?branch=main&label=CI" alt="CI"></a>
@@ -15,11 +18,11 @@
 
 ## Why this exists
 
-LLM coding agents have been plumbed into databases, IDEs, GitHub, Slack, and the desktop. **Healthcare is the holdout.** When a clinician, founder, or back-office team tries to give Claude or Cursor real EHR context, they hit the same wall: FHIR is a 2,000-page spec, the data is dense with PHI, and nobody trusts a freeform LLM to touch it.
+LLM coding agents have been plumbed into databases, IDEs, GitHub, Slack, and the desktop. **Healthcare is the holdout.** When a clinician, founder, or back-office team tries to give an MCP-compatible assistant real EHR context, they hit the same wall: FHIR is a 2,000-page spec, the data is dense with PHI, and nobody trusts a freeform LLM to touch it.
 
 Six open-source FHIR MCP servers already exist. **None of them solve the trust problem.** They expose FHIR resources as MCP tools, hope the LLM doesn't hallucinate codes, and mask some PHI with regex. There is no reproducible clinical-accuracy benchmark. There is no controlled re-identification path. There is no bridge to **CDS Hooks** — the production standard for clinical decision support. There is no link between LLM traces and audit logs.
 
-`fhir-mcp` is the **first FHIR MCP server engineered for trust, not just access** — so you can drop it into Claude Code on Monday morning, demo it to a clinical-safety officer on Friday, and have a defensible answer to every question they ask.
+`fhir-mcp` is the **first FHIR MCP server engineered for trust, not just access** — so you can drop it into your MCP client on Monday morning, demo it to a clinical-safety officer on Friday, and have a defensible answer to every question they ask.
 
 | Capability | [Momentum][m] | [xSoVx][x] | [WSO2][w] | [AWS HealthLake][a] | [Flexpa][f] | [langcare][l] | **fhir-mcp** |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
@@ -120,7 +123,7 @@ FHIR_MCP_BACKEND=hapi uvx fhir-mcp serve
 ```mermaid
 flowchart LR
   subgraph CLI["AI Client"]
-    A[Claude Code / Cursor / Gemini]
+    A[MCP-compatible client]
   end
 
   subgraph SRV["fhir-mcp server"]
