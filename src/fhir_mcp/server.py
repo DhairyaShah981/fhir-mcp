@@ -335,13 +335,51 @@ def run_stdio() -> None:
 
 
 def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
-    """Run the MCP server over SSE (HTTP)."""
+    """Run the MCP server over SSE (HTTP) with a small landing page at /."""
     import anyio
+    from starlette.responses import JSONResponse, PlainTextResponse
 
     _configure_logging()
     log.info("fhir_mcp_starting_sse", host=host, port=port)
     anyio.run(_bootstrap_storage)
     app = _build_app()
+
+    @app.custom_route("/", methods=["GET"])
+    async def _landing(_request):  # type: ignore[no-redef]
+        return JSONResponse({
+            "name": "fhir-mcp",
+            "description": (
+                "Trustworthy FHIR R4 MCP server — reproducible clinical evals, "
+                "reversible keyed de-identification, CDS Hooks decision support, "
+                "audit trails."
+            ),
+            "transport": "sse",
+            "mcp_endpoint": "/sse",
+            "tools": [
+                "search_patients",
+                "get_patient_summary",
+                "get_medications",
+                "search_conditions",
+                "search_observations",
+                "validate_code",
+                "run_cds_hook",
+                "create_clinical_note",
+            ],
+            "synthetic_patients": [
+                "pediatric_asthma_8yo",
+                "diabetic_60yo",
+                "chf_warfarin_70yo",
+                "pregnant_with_htn_28yo",
+                "geriatric_polypharmacy_82yo",
+            ],
+            "data": "Synthea-style synthetic — no real PHI",
+            "github": "https://github.com/DhairyaShah981/fhir-mcp",
+        })
+
+    @app.custom_route("/healthz", methods=["GET"])
+    async def _healthz(_request):  # type: ignore[no-redef]
+        return PlainTextResponse("ok")
+
     app.settings.host = host
     app.settings.port = port
     app.run("sse")

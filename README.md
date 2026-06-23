@@ -3,8 +3,8 @@
 > **The trustworthy FHIR bridge for AI agents.**
 > Plug any MCP-compatible assistant into a real FHIR R4 server — with reproducible clinical evals, reversible keyed de-identification, CDS Hooks decision support, and per-call audit trails out of the box.
 
-**🚀 Live demo:** `https://dhairya-fhir-mcp.fly.dev/sse` _(URL fills in after `fly deploy` — see [`DEPLOY.md`](DEPLOY.md))_
-Synthea-style synthetic patients (5 golden bundles, no real PHI). Point any MCP client at the URL and call `search_patients`, `get_patient_summary`, `run_cds_hook`, or any of the other 8 tools.
+**🚀 Live demo:** [**`https://dhairya-fhir-mcp.fly.dev/`**](https://dhairya-fhir-mcp.fly.dev/) → JSON info · [**`/sse`**](https://dhairya-fhir-mcp.fly.dev/sse) → MCP endpoint
+Synthea-style synthetic patients (5 golden bundles, no real PHI). Point any MCP client at `/sse` and call `search_patients`, `get_patient_summary`, `run_cds_hook`, or any of the other 8 tools. Deploy your own copy: see [`DEPLOY.md`](DEPLOY.md).
 
 <p>
   <a href="https://github.com/DhairyaShah981/fhir-mcp/actions"><img src="https://img.shields.io/github/actions/workflow/status/DhairyaShah981/fhir-mcp/ci.yml?branch=main&label=CI" alt="CI"></a>
