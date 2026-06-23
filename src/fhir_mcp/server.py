@@ -338,7 +338,25 @@ def run_stdio() -> None:
 def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
     """Run the MCP server over SSE (HTTP) with a landing page at /."""
     import anyio
+    from starlette.requests import Request
     from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
+
+    from .tools.get_medications import (
+        GetMedicationsInput as _GMInput,
+        get_medications as _gm_handler,
+    )
+    from .tools.get_patient_summary import (
+        GetPatientSummaryInput as _GPInput,
+        get_patient_summary as _gp_handler,
+    )
+    from .tools.search_patients import (
+        SearchPatientsInput as _SPInput,
+        search_patients as _sp_handler,
+    )
+    from .tools.validate_code import (
+        ValidateCodeInput as _VCInput,
+        validate_code as _vc_handler,
+    )
 
     _configure_logging()
     log.info("fhir_mcp_starting_sse", host=host, port=port)
@@ -430,7 +448,51 @@ def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
   .footer a:hover {{ border-bottom-color: #18181b; }}
   .note {{ background: #fefce8; border-left: 3px solid #eab308; padding: 12px 16px;
             font-size: 14px; color: #713f12; border-radius: 4px; margin-top: 16px; }}
+  .play {{ background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px;
+            padding: 12px; margin-bottom: 12px; }}
+  .play .row {{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }}
+  .play strong {{ font-family: ui-monospace, monospace; font-size: 13px; min-width: 170px; }}
+  .play input, .play select {{ font: inherit; padding: 6px 10px; border: 1px solid #d4d4d8;
+                                 border-radius: 6px; font-size: 13px; }}
+  .play button {{ background: #18181b; color: white; border: 0; padding: 6px 14px;
+                   border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }}
+  .play button:hover {{ background: #3f3f46; }}
+  .play .out {{ margin-top: 10px; background: #18181b; color: #d4d4d8; padding: 10px 12px;
+                 border-radius: 6px; font-family: ui-monospace, monospace; font-size: 12px;
+                 max-height: 220px; overflow: auto; white-space: pre-wrap;
+                 word-break: break-word; }}
 </style>
+<script>
+async function runTry(tool, body, outId) {{
+  const out = document.getElementById(outId);
+  out.textContent = 'calling /try/' + tool + ' ...';
+  try {{
+    const res = await fetch('/try/' + tool, {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify(body),
+    }});
+    const txt = await res.text();
+    out.textContent = txt;
+    // If this is search_patients output, pull pseudonyms into the dropdown.
+    if (tool === 'search_patients') {{
+      try {{
+        const data = JSON.parse(txt);
+        const sel = document.getElementById('gs-pseudo');
+        sel.innerHTML = '<option value="">(pick a patient)</option>';
+        (data.patients || []).forEach(p => {{
+          const opt = document.createElement('option');
+          opt.value = p.pseudonym;
+          opt.textContent = p.pseudonym + ' — ' + (p.gender || '?') + ' / ' + (p.age_band || '?');
+          sel.appendChild(opt);
+        }});
+      }} catch (e) {{}}
+    }}
+  }} catch (e) {{
+    out.textContent = 'error: ' + e.message;
+  }}
+}}
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -452,6 +514,48 @@ def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
       <code>curl -N -H "Accept: text/event-stream" https://dhairya-fhir-mcp.fly.dev/sse</code><br>
       <strong>Try as JSON</strong> &mdash;
       <code>curl -H "Accept: application/json" https://dhairya-fhir-mcp.fly.dev/</code>
+    </div>
+  </section>
+
+  <section>
+    <h2>Try it · live playground</h2>
+    <p style="font-size:14px;color:#52525b;margin:0 0 16px">
+      These call the same handlers the MCP tools use against the Synthea backend. Try them right here.
+    </p>
+
+    <div class="play">
+      <div class="row">
+        <strong>search_patients</strong>
+        <input id="sp-name" placeholder="name (e.g. 'sm')" style="width:200px">
+        <button onclick="runTry('search_patients', {{name: document.getElementById('sp-name').value || null, limit: 5}}, 'sp-out')">Run &rarr;</button>
+      </div>
+      <pre id="sp-out" class="out">click Run to call the tool...</pre>
+    </div>
+
+    <div class="play">
+      <div class="row">
+        <strong>get_patient_summary</strong>
+        <select id="gs-pseudo">
+          <option value="">(pick a patient — run search_patients first to get a pseudonym)</option>
+        </select>
+        <button onclick="runTry('get_patient_summary', {{patient_pseudonym: document.getElementById('gs-pseudo').value}}, 'gs-out')">Run &rarr;</button>
+      </div>
+      <pre id="gs-out" class="out">first run search_patients above, then pick a pseudonym...</pre>
+    </div>
+
+    <div class="play">
+      <div class="row">
+        <strong>validate_code</strong>
+        <select id="vc-system" style="width:140px">
+          <option value="loinc">LOINC</option>
+          <option value="snomed">SNOMED</option>
+          <option value="rxnorm">RxNorm</option>
+          <option value="icd10">ICD-10</option>
+        </select>
+        <input id="vc-code" placeholder="code (e.g. 4548-4)" style="width:160px" value="4548-4">
+        <button onclick="runTry('validate_code', {{system: document.getElementById('vc-system').value, code: document.getElementById('vc-code').value}}, 'vc-out')">Run &rarr;</button>
+      </div>
+      <pre id="vc-out" class="out">click Run to validate (4548-4 is HbA1c)...</pre>
     </div>
   </section>
 
@@ -483,6 +587,40 @@ def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
     @app.custom_route("/healthz", methods=["GET"])
     async def _healthz(_request):  # type: ignore[no-redef]
         return PlainTextResponse("ok")
+
+    # ---- /try/* — browser-callable REST shims for the playground ----------
+    # These call the same handlers the MCP tools use, so the playground
+    # exercises the real production code path (de-id, audit, observability
+    # included). Not part of the MCP protocol — pure REST for the demo UI.
+
+    async def _safe_call(request: Request, handler, input_cls):
+        try:
+            body = await request.json() if await request.body() else {}
+        except Exception:
+            body = {}
+        try:
+            result = await handler(input_cls(**body))
+            return JSONResponse(result.model_dump(mode="json"))
+        except Exception as exc:  # noqa: BLE001
+            return JSONResponse(
+                {"error": f"{type(exc).__name__}: {exc}"}, status_code=400,
+            )
+
+    @app.custom_route("/try/search_patients", methods=["POST"])
+    async def _try_search(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _sp_handler, _SPInput)
+
+    @app.custom_route("/try/get_patient_summary", methods=["POST"])
+    async def _try_summary(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _gp_handler, _GPInput)
+
+    @app.custom_route("/try/get_medications", methods=["POST"])
+    async def _try_meds(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _gm_handler, _GMInput)
+
+    @app.custom_route("/try/validate_code", methods=["POST"])
+    async def _try_code(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _vc_handler, _VCInput)
 
     app.settings.host = host
     app.settings.port = port
