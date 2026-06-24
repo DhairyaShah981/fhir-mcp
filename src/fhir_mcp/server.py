@@ -12,6 +12,7 @@ from typing import Any
 
 import structlog
 
+from . import __version__
 from .audit import init as audit_init
 from .config import get_settings
 from .deid.vault import get_vault
@@ -335,13 +336,300 @@ def run_stdio() -> None:
 
 
 def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
-    """Run the MCP server over SSE (HTTP)."""
+    """Run the MCP server over SSE (HTTP) with a landing page at /."""
     import anyio
+    from starlette.requests import Request
+    from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
+
+    from .tools.get_medications import (
+        GetMedicationsInput as _GMInput,
+    )
+    from .tools.get_medications import (
+        get_medications as _gm_handler,
+    )
+    from .tools.get_patient_summary import (
+        GetPatientSummaryInput as _GPInput,
+    )
+    from .tools.get_patient_summary import (
+        get_patient_summary as _gp_handler,
+    )
+    from .tools.search_patients import (
+        SearchPatientsInput as _SPInput,
+    )
+    from .tools.search_patients import (
+        search_patients as _sp_handler,
+    )
+    from .tools.validate_code import (
+        ValidateCodeInput as _VCInput,
+    )
+    from .tools.validate_code import (
+        validate_code as _vc_handler,
+    )
 
     _configure_logging()
     log.info("fhir_mcp_starting_sse", host=host, port=port)
     anyio.run(_bootstrap_storage)
     app = _build_app()
+
+    _tools_table = [
+        ("search_patients", "Find patients by demographics or fuzzy name match."),
+        ("get_patient_summary", "Compact one-screen summary for a patient pseudonym."),
+        ("get_medications", "Active medication list with interaction flags."),
+        ("search_conditions", "Conditions / problem-list entries."),
+        ("search_observations", "Vitals + labs (HbA1c, BP, LDL, creatinine, etc)."),
+        ("validate_code", "LOINC / SNOMED / RxNorm / ICD-10 lookup."),
+        ("run_cds_hook", "Run a CDS Hooks card (drug-drug, drug-allergy)."),
+        ("create_clinical_note", "Write a SOAP / discharge / prior-auth note."),
+    ]
+    _patients_table = [
+        ("pediatric_asthma_8yo", "8-year-old asthma exacerbation"),
+        ("diabetic_60yo", "60-year-old T2DM, HbA1c trend"),
+        ("chf_warfarin_70yo", "70-year-old CHF on warfarin (drug-drug)"),
+        ("pregnant_with_htn_28yo", "28-year-old pregnant + hypertension"),
+        ("geriatric_polypharmacy_82yo", "82-year-old polypharmacy (deprescribing)"),
+    ]
+
+    @app.custom_route("/", methods=["GET"])
+    async def _landing(request):  # type: ignore[no-redef]
+        # Negotiate: JSON for machine clients (curl with -H Accept: application/json,
+        # MCP discovery, etc.). HTML for browsers.
+        accept = request.headers.get("accept", "")
+        if "application/json" in accept and "text/html" not in accept:
+            return JSONResponse({
+                "name": "fhir-mcp",
+                "description": (
+                    "Trustworthy FHIR R4 MCP server with reproducible clinical evals, "
+                    "reversible keyed de-identification, CDS Hooks, audit trails."
+                ),
+                "transport": "sse",
+                "mcp_endpoint": "/sse",
+                "tools": [t[0] for t in _tools_table],
+                "synthetic_patients": [p[0] for p in _patients_table],
+                "data": "Synthea-style synthetic, no real PHI",
+                "github": "https://github.com/DhairyaShah981/fhir-mcp",
+            })
+
+        tool_rows = "\n".join(
+            f"<tr><td><code>{n}</code></td><td>{d}</td></tr>" for n, d in _tools_table
+        )
+        patient_rows = "\n".join(
+            f"<tr><td><code>{p}</code></td><td>{d}</td></tr>" for p, d in _patients_table
+        )
+        html = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>fhir-mcp · live MCP server</title>
+<style>
+  * {{ box-sizing: border-box }}
+  body {{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    margin: 0; padding: 0; background: #fafafa; color: #18181b; line-height: 1.6;
+  }}
+  .wrap {{ max-width: 880px; margin: 0 auto; padding: 48px 24px 64px; }}
+  header {{ border-bottom: 1px solid #e4e4e7; padding-bottom: 24px; margin-bottom: 32px; }}
+  header h1 {{ font-size: 28px; margin: 0 0 8px; letter-spacing: -0.02em; }}
+  header p {{ margin: 0; color: #71717a; font-size: 15px; }}
+  .live {{ display: inline-block; background: #10b981; color: white; font-size: 11px;
+           padding: 2px 8px; border-radius: 999px; font-weight: 600; letter-spacing: 0.05em;
+           text-transform: uppercase; margin-right: 8px; vertical-align: 1px; }}
+  .endpoint {{ background: #18181b; color: #f4f4f5; padding: 12px 16px;
+               border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo,
+               monospace; font-size: 13px; margin: 16px 0 8px;
+               display: flex; align-items: center; justify-content: space-between; gap: 12px; }}
+  .endpoint .label {{ color: #71717a; font-size: 11px; text-transform: uppercase;
+                       letter-spacing: 0.05em; }}
+  section {{ margin-top: 32px; }}
+  section h2 {{ font-size: 16px; margin: 0 0 12px; font-weight: 600;
+                text-transform: uppercase; letter-spacing: 0.06em; color: #52525b; }}
+  table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+  table tr {{ border-bottom: 1px solid #e4e4e7; }}
+  table tr:last-child {{ border-bottom: none; }}
+  table td {{ padding: 10px 8px; vertical-align: top; }}
+  table td:first-child {{ width: 240px; }}
+  table code {{ background: #f4f4f5; padding: 2px 6px; border-radius: 4px;
+                font-size: 13px; color: #18181b; }}
+  .footer {{ margin-top: 48px; padding-top: 24px; border-top: 1px solid #e4e4e7;
+              font-size: 13px; color: #71717a; display: flex; gap: 16px; flex-wrap: wrap; }}
+  .footer a {{ color: #18181b; text-decoration: none; border-bottom: 1px solid #d4d4d8; }}
+  .footer a:hover {{ border-bottom-color: #18181b; }}
+  .note {{ background: #fefce8; border-left: 3px solid #eab308; padding: 12px 16px;
+            font-size: 14px; color: #713f12; border-radius: 4px; margin-top: 16px; }}
+  .play {{ background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px;
+            padding: 12px; margin-bottom: 12px; }}
+  .play .row {{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }}
+  .play strong {{ font-family: ui-monospace, monospace; font-size: 13px; min-width: 170px; }}
+  .play input, .play select {{ font: inherit; padding: 6px 10px; border: 1px solid #d4d4d8;
+                                 border-radius: 6px; font-size: 13px; }}
+  .play button {{ background: #18181b; color: white; border: 0; padding: 6px 14px;
+                   border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }}
+  .play button:hover {{ background: #3f3f46; }}
+  .play .out {{ margin-top: 10px; background: #18181b; color: #d4d4d8; padding: 10px 12px;
+                 border-radius: 6px; font-family: ui-monospace, monospace; font-size: 12px;
+                 max-height: 220px; overflow: auto; white-space: pre-wrap;
+                 word-break: break-word; }}
+</style>
+<script>
+async function runTry(tool, body, outId) {{
+  const out = document.getElementById(outId);
+  out.textContent = 'calling /try/' + tool + ' ...';
+  try {{
+    const res = await fetch('/try/' + tool, {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify(body),
+    }});
+    const txt = await res.text();
+    out.textContent = txt;
+    // If this is search_patients output, pull pseudonyms into the dropdown.
+    if (tool === 'search_patients') {{
+      try {{
+        const data = JSON.parse(txt);
+        const sel = document.getElementById('gs-pseudo');
+        sel.innerHTML = '<option value="">(pick a patient)</option>';
+        (data.patients || []).forEach(p => {{
+          const opt = document.createElement('option');
+          opt.value = p.pseudonym;
+          opt.textContent = p.pseudonym + ' — ' + (p.gender || '?') + ' / ' + (p.age_band || '?');
+          sel.appendChild(opt);
+        }});
+      }} catch (e) {{}}
+    }}
+  }} catch (e) {{
+    out.textContent = 'error: ' + e.message;
+  }}
+}}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="live">live</span>fhir-mcp</h1>
+    <p>Trustworthy FHIR R4 MCP server &middot; reproducible clinical evals &middot; reversible keyed de-identification &middot; CDS Hooks &middot; audit trails.</p>
+  </header>
+
+  <section>
+    <h2>MCP endpoint</h2>
+    <div class="endpoint">
+      <span><span class="label">SSE</span> &nbsp; https://dhairya-fhir-mcp.fly.dev/sse</span>
+    </div>
+    <p style="font-size: 14px; color: #52525b; margin: 12px 0 0;">
+      Point any MCP-compatible client at the URL above. Synthea-style synthetic data only &mdash; no real PHI.
+    </p>
+    <div class="note">
+      <strong>Try in the terminal</strong> &mdash;
+      <code>curl -N -H "Accept: text/event-stream" https://dhairya-fhir-mcp.fly.dev/sse</code><br>
+      <strong>Try as JSON</strong> &mdash;
+      <code>curl -H "Accept: application/json" https://dhairya-fhir-mcp.fly.dev/</code>
+    </div>
+  </section>
+
+  <section>
+    <h2>Try it · live playground</h2>
+    <p style="font-size:14px;color:#52525b;margin:0 0 16px">
+      These call the same handlers the MCP tools use against the Synthea backend. Try them right here.
+    </p>
+
+    <div class="play">
+      <div class="row">
+        <strong>search_patients</strong>
+        <input id="sp-name" placeholder="name (e.g. 'sm')" style="width:200px">
+        <button onclick="runTry('search_patients', {{name: document.getElementById('sp-name').value || null, limit: 5}}, 'sp-out')">Run &rarr;</button>
+      </div>
+      <pre id="sp-out" class="out">click Run to call the tool...</pre>
+    </div>
+
+    <div class="play">
+      <div class="row">
+        <strong>get_patient_summary</strong>
+        <select id="gs-pseudo">
+          <option value="">(pick a patient — run search_patients first to get a pseudonym)</option>
+        </select>
+        <button onclick="runTry('get_patient_summary', {{patient_pseudonym: document.getElementById('gs-pseudo').value}}, 'gs-out')">Run &rarr;</button>
+      </div>
+      <pre id="gs-out" class="out">first run search_patients above, then pick a pseudonym...</pre>
+    </div>
+
+    <div class="play">
+      <div class="row">
+        <strong>validate_code</strong>
+        <select id="vc-system" style="width:140px">
+          <option value="loinc">LOINC</option>
+          <option value="snomed">SNOMED</option>
+          <option value="rxnorm">RxNorm</option>
+          <option value="icd10">ICD-10</option>
+        </select>
+        <input id="vc-code" placeholder="code (e.g. 4548-4)" style="width:160px" value="4548-4">
+        <button onclick="runTry('validate_code', {{system: document.getElementById('vc-system').value, code: document.getElementById('vc-code').value}}, 'vc-out')">Run &rarr;</button>
+      </div>
+      <pre id="vc-out" class="out">click Run to validate (4548-4 is HbA1c)...</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tools ({len(_tools_table)})</h2>
+    <table>
+      {tool_rows}
+    </table>
+  </section>
+
+  <section>
+    <h2>Synthetic patients ({len(_patients_table)})</h2>
+    <table>
+      {patient_rows}
+    </table>
+  </section>
+
+  <div class="footer">
+    <a href="https://github.com/DhairyaShah981/fhir-mcp">GitHub &rarr;</a>
+    <a href="https://github.com/DhairyaShah981/fhir-mcp/blob/main/DEPLOY.md">Deploy guide</a>
+    <a href="/healthz">Healthz</a>
+    <span style="margin-left: auto;">Apache-2.0 &middot; v{__version__}</span>
+  </div>
+</div>
+</body>
+</html>"""
+        return HTMLResponse(html)
+
+    @app.custom_route("/healthz", methods=["GET"])
+    async def _healthz(_request):  # type: ignore[no-redef]
+        return PlainTextResponse("ok")
+
+    # ---- /try/* — browser-callable REST shims for the playground ----------
+    # These call the same handlers the MCP tools use, so the playground
+    # exercises the real production code path (de-id, audit, observability
+    # included). Not part of the MCP protocol — pure REST for the demo UI.
+
+    async def _safe_call(request: Request, handler, input_cls):
+        try:
+            body = await request.json() if await request.body() else {}
+        except Exception:
+            body = {}
+        try:
+            result = await handler(input_cls(**body))
+            return JSONResponse(result.model_dump(mode="json"))
+        except Exception as exc:
+            return JSONResponse(
+                {"error": f"{type(exc).__name__}: {exc}"}, status_code=400,
+            )
+
+    @app.custom_route("/try/search_patients", methods=["POST"])
+    async def _try_search(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _sp_handler, _SPInput)
+
+    @app.custom_route("/try/get_patient_summary", methods=["POST"])
+    async def _try_summary(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _gp_handler, _GPInput)
+
+    @app.custom_route("/try/get_medications", methods=["POST"])
+    async def _try_meds(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _gm_handler, _GMInput)
+
+    @app.custom_route("/try/validate_code", methods=["POST"])
+    async def _try_code(request):  # type: ignore[no-redef]
+        return await _safe_call(request, _vc_handler, _VCInput)
+
     app.settings.host = host
     app.settings.port = port
     app.run("sse")

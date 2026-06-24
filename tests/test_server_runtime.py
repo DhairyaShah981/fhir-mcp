@@ -41,6 +41,12 @@ def test_run_sse_sets_host_port_and_runs(monkeypatch) -> None:
         def __init__(self) -> None:
             self.settings = _Settings()
 
+        def custom_route(self, _path, methods=None):
+            # FastMCP exposes custom_route as a decorator; the test just records it.
+            def _decorator(fn):
+                return fn
+            return _decorator
+
         def run(self, transport: str) -> None:
             started.append((transport, self.settings.host, self.settings.port))
 
