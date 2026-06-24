@@ -13,6 +13,8 @@ invoking MCP tool call.
 
 from __future__ import annotations
 
+import hmac
+
 import structlog
 
 from ..audit import record as audit_record
@@ -70,7 +72,12 @@ async def reidentify(
         raise ReidDisabledError("Re-identification is disabled. Set FHIR_MCP_ENABLE_REID=true.")
 
     smart_ok = _smart_authorized(smart_token)
-    key_ok = bool(settings.reid_key and key and key == settings.reid_key)
+    # Constant-time comparison prevents timing-based key recovery.
+    key_ok = bool(
+        settings.reid_key
+        and key
+        and hmac.compare_digest(key.encode(), settings.reid_key.encode())
+    )
     if not (smart_ok or key_ok):
         await audit_record(
             tool="reid",
