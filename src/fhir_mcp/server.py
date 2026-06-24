@@ -600,8 +600,66 @@ async function runTry(tool, body, outId) {{
     # These call the same handlers the MCP tools use, so the playground
     # exercises the real production code path (de-id, audit, observability
     # included). Not part of the MCP protocol — pure REST for the demo UI.
+    #
+    # Auth: if FHIR_MCP_DEMO_API_KEY is set, clients must send a matching
+    # X-API-Key header. Per-IP rate limit (FHIR_MCP_TRY_RATE_LIMIT_PER_MIN,
+    # default 60) applies regardless. Every call is logged.
 
-    async def _safe_call(request: Request, handler, input_cls):
+    import hmac as _hmac
+    import time as _time
+    from collections import defaultdict, deque
+
+    _try_settings = get_settings()
+    _try_rate_buckets: dict[str, deque[float]] = defaultdict(deque)
+
+    def _client_ip(request: Request) -> str:
+        # Honour Fly's forwarded header if present, else fall back to peer.
+        fwd = request.headers.get("fly-client-ip") or request.headers.get(
+            "x-forwarded-for", ""
+        )
+        if fwd:
+            return fwd.split(",")[0].strip()
+        client = request.client
+        return client.host if client else "unknown"
+
+    def _check_rate_limit(ip: str) -> bool:
+        cap = _try_settings.try_rate_limit_per_min
+        if cap <= 0:
+            return True
+        bucket = _try_rate_buckets[ip]
+        now = _time.monotonic()
+        cutoff = now - 60.0
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
+        if len(bucket) >= cap:
+            return False
+        bucket.append(now)
+        return True
+
+    def _check_api_key(request: Request) -> bool:
+        expected = _try_settings.demo_api_key
+        if not expected:
+            return True
+        provided = request.headers.get("x-api-key", "")
+        return _hmac.compare_digest(
+            provided.encode(), expected.encode(),
+        )
+
+    async def _safe_call(request: Request, handler, input_cls, tool_name: str):
+        ip = _client_ip(request)
+        if not _check_api_key(request):
+            log.warning("try_endpoint_unauthorized", tool=tool_name, ip=ip)
+            return JSONResponse(
+                {"error": "unauthorized: X-API-Key header missing or invalid"},
+                status_code=401,
+            )
+        if not _check_rate_limit(ip):
+            log.warning("try_endpoint_rate_limited", tool=tool_name, ip=ip)
+            return JSONResponse(
+                {"error": f"rate_limited: max {_try_settings.try_rate_limit_per_min}/min per IP"},
+                status_code=429,
+            )
+        log.info("try_endpoint_call", tool=tool_name, ip=ip)
         try:
             body = await request.json() if await request.body() else {}
         except Exception:
@@ -616,19 +674,19 @@ async function runTry(tool, body, outId) {{
 
     @app.custom_route("/try/search_patients", methods=["POST"])
     async def _try_search(request):  # type: ignore[no-redef]
-        return await _safe_call(request, _sp_handler, _SPInput)
+        return await _safe_call(request, _sp_handler, _SPInput, "search_patients")
 
     @app.custom_route("/try/get_patient_summary", methods=["POST"])
     async def _try_summary(request):  # type: ignore[no-redef]
-        return await _safe_call(request, _gp_handler, _GPInput)
+        return await _safe_call(request, _gp_handler, _GPInput, "get_patient_summary")
 
     @app.custom_route("/try/get_medications", methods=["POST"])
     async def _try_meds(request):  # type: ignore[no-redef]
-        return await _safe_call(request, _gm_handler, _GMInput)
+        return await _safe_call(request, _gm_handler, _GMInput, "get_medications")
 
     @app.custom_route("/try/validate_code", methods=["POST"])
     async def _try_code(request):  # type: ignore[no-redef]
-        return await _safe_call(request, _vc_handler, _VCInput)
+        return await _safe_call(request, _vc_handler, _VCInput, "validate_code")
 
     app.settings.host = host
     app.settings.port = port
