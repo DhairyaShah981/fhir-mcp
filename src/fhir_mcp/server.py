@@ -343,18 +343,26 @@ def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
 
     from .tools.get_medications import (
         GetMedicationsInput as _GMInput,
+    )
+    from .tools.get_medications import (
         get_medications as _gm_handler,
     )
     from .tools.get_patient_summary import (
         GetPatientSummaryInput as _GPInput,
+    )
+    from .tools.get_patient_summary import (
         get_patient_summary as _gp_handler,
     )
     from .tools.search_patients import (
         SearchPatientsInput as _SPInput,
+    )
+    from .tools.search_patients import (
         search_patients as _sp_handler,
     )
     from .tools.validate_code import (
         ValidateCodeInput as _VCInput,
+    )
+    from .tools.validate_code import (
         validate_code as _vc_handler,
     )
 
@@ -363,7 +371,7 @@ def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
     anyio.run(_bootstrap_storage)
     app = _build_app()
 
-    TOOLS = [
+    _tools_table = [
         ("search_patients", "Find patients by demographics or fuzzy name match."),
         ("get_patient_summary", "Compact one-screen summary for a patient pseudonym."),
         ("get_medications", "Active medication list with interaction flags."),
@@ -373,7 +381,7 @@ def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
         ("run_cds_hook", "Run a CDS Hooks card (drug-drug, drug-allergy)."),
         ("create_clinical_note", "Write a SOAP / discharge / prior-auth note."),
     ]
-    PATIENTS = [
+    _patients_table = [
         ("pediatric_asthma_8yo", "8-year-old asthma exacerbation"),
         ("diabetic_60yo", "60-year-old T2DM, HbA1c trend"),
         ("chf_warfarin_70yo", "70-year-old CHF on warfarin (drug-drug)"),
@@ -395,17 +403,17 @@ def run_sse(host: str = "127.0.0.1", port: int = 8765) -> None:
                 ),
                 "transport": "sse",
                 "mcp_endpoint": "/sse",
-                "tools": [t[0] for t in TOOLS],
-                "synthetic_patients": [p[0] for p in PATIENTS],
+                "tools": [t[0] for t in _tools_table],
+                "synthetic_patients": [p[0] for p in _patients_table],
                 "data": "Synthea-style synthetic, no real PHI",
                 "github": "https://github.com/DhairyaShah981/fhir-mcp",
             })
 
         tool_rows = "\n".join(
-            f"<tr><td><code>{n}</code></td><td>{d}</td></tr>" for n, d in TOOLS
+            f"<tr><td><code>{n}</code></td><td>{d}</td></tr>" for n, d in _tools_table
         )
         patient_rows = "\n".join(
-            f"<tr><td><code>{p}</code></td><td>{d}</td></tr>" for p, d in PATIENTS
+            f"<tr><td><code>{p}</code></td><td>{d}</td></tr>" for p, d in _patients_table
         )
         html = f"""<!doctype html>
 <html lang="en">
@@ -560,14 +568,14 @@ async function runTry(tool, body, outId) {{
   </section>
 
   <section>
-    <h2>Tools ({len(TOOLS)})</h2>
+    <h2>Tools ({len(_tools_table)})</h2>
     <table>
       {tool_rows}
     </table>
   </section>
 
   <section>
-    <h2>Synthetic patients ({len(PATIENTS)})</h2>
+    <h2>Synthetic patients ({len(_patients_table)})</h2>
     <table>
       {patient_rows}
     </table>
@@ -601,7 +609,7 @@ async function runTry(tool, body, outId) {{
         try:
             result = await handler(input_cls(**body))
             return JSONResponse(result.model_dump(mode="json"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return JSONResponse(
                 {"error": f"{type(exc).__name__}: {exc}"}, status_code=400,
             )
