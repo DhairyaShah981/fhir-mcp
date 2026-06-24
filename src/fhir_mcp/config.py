@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     enable_reid: bool = False
     reid_key: str | None = None
 
+    # --- Playground (/try/*) protection ----------------------------------
+    # If demo_api_key is set, /try/* endpoints require matching X-API-Key
+    # header. Per-IP rate limit applies regardless. Defaults keep the
+    # zero-config local dev story; production deployments should set both.
+    demo_api_key: str | None = None
+    try_rate_limit_per_min: int = 60
+
     # --- Storage ----------------------------------------------------------
     state_dir: Path = Field(default_factory=_default_state_dir)
     audit_url: str | None = None  # if unset → sqlite under state_dir/audit.db
